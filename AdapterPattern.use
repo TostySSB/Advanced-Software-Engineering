@@ -1,0 +1,64 @@
+
+model DataConsumer
+
+-- classes
+
+class Client
+attributes
+operations
+    Statement()
+    begin
+        declare z:Zoner;
+        for char in self.characters do
+            char.space();
+            char.defend();
+            char.zone();
+        end
+    end
+end
+
+class Zoner
+attributes
+
+operations
+    space()
+        begin
+        end
+    defend()
+        begin
+        end
+    zone()
+        begin
+        end
+end
+
+class RushDownAdapter
+attributes
+operations
+    space()
+    defend()
+    zone()
+end
+
+class RushDown
+attributes
+operations
+    jab()
+    approach()
+    grab()
+end
+
+association PlayerChar between
+    Client[1] role client
+    Zoner[1..80] role characters
+end
+
+association ZoneAdapter between
+    Zoner[*] role zoner
+    RushDownAdapter[1] role rushadapter
+end
+
+association RushAdapter between
+    RushDownAdapter[1] role adapter
+    RushDown[1] role rushdown
+end

@@ -1,0 +1,310 @@
+model fps
+
+abstract class State
+    operations
+        accept()
+            begin
+            end
+        seeOpponent(defeatable: Boolean)
+            begin   
+            end
+        lostOpponent()
+            begin
+            end
+        receiveBlow(damage: Integer)
+            begin
+            end
+        complete()
+            begin
+            end
+        reload()
+            begin
+            end
+end
+
+class FPSGame
+attributes
+    player1: Player
+operations
+end
+
+class Inventory
+attributes
+    weapon1: Weapon
+    weapon2: Weapon
+operations
+end
+
+class Weapon
+attributes
+    weapon_name: String
+    bullets_held: Integer
+operations
+    shoot()
+        begin
+        end
+    reload()
+        begin
+        end
+end
+
+class Level
+attributes
+    number: Integer
+    difficulty: Integer
+operations
+    start_level()
+        begin
+        end
+    end_level()
+        begin
+        end
+end
+
+class Mode
+attributes
+    game_mode: String
+    number_of_players_in_game: Integer
+operations
+    select_game_mode()
+        begin
+        end
+end
+
+class Events
+operations
+    start_game()
+        begin
+        end
+    player_death()
+        begin
+        end
+    player_respawn()
+        begin
+        end
+    team1_win()
+        begin
+        end
+    team2_win()
+        begin
+        end
+end
+
+class Player
+    attributes
+        health: Integer init : 100
+        playerLevel: Integer init : 1
+        playerInventory: Inventory
+        playerState: State
+        deadState: State
+        neutralState: State
+        attackState: State
+        panicState: State
+        reloadingState: State
+    operations
+        /* Create new Player*/
+        initInstance()
+        begin
+            self.health := 100;
+            self.playerLevel := 1;
+            self.playerInventory := new Inventory;
+            self.deadState := new Die;
+            self.neutralState := new Neutral;
+            self.attackState := new Attack;
+            self.panicState := new Panic;
+            self.reloadingState := new Reloading;
+
+            self.playerState := self.neutralState;
+            -- start in neutral state
+        end
+        accept()
+            begin
+                self.playerState.accept();
+            end
+        seeOpponent(defeatable: Boolean)
+            begin
+                self.playerState.seeOpponent(defeatable);
+            end;
+        lostOpponent()
+            begin
+                self.playerState.lostOpponent();
+            end;
+        receiveBlow(damage: Integer)
+            begin
+                self.playerState.receiveBlow(damage);
+            end;
+        complete()
+            begin
+                self.playerState.complete()
+            end;
+        reload()
+            begin
+                self.playerState.reload()
+            end;
+    statemachines
+     /* This state machine describes the
+      * "lifecycle" of the coffee dispenser.
+      */
+     psm StatePattern
+       states
+         -- The start node
+         startUp:initial
+         Neutral [playerState = neutralState]
+         Attack  [playerState = attackState]
+         Panic   [playerState = panicState]
+         Die     [playerState = deadState]
+         Reloading [playerState = reloadingState]
+       transitions
+        startUp -> Neutral {create}
+        
+        Neutral -> Attack {[playerState = neutralState] seeOpponent() }
+        
+        Neutral -> Panic {[playerState = neutralState] seeOpponent() }
+
+        Neutral -> Neutral{[playerState = neutralState] accept()}
+        
+        Neutral -> Reloading{[playerState = neutralState] reload()}
+
+        Attack -> Die {[playerState = attackState and (health-damage)<=0] receiveBlow()}
+
+        Attack -> Attack {[playerState = attackState and (health-damage)>0] receiveBlow()}
+        
+        Attack -> Attack {[playerState = attackState] accept()}
+        
+        Attack -> Neutral {[playerState = attackState] lostOpponent()}
+        
+        Panic -> Die {[playerState = panicState and (health = 0)]accept()}
+
+        Panic -> Neutral{[playerState = panicState] lostOpponent()}
+
+        Panic -> Panic {[playerState = panicState and health>0] accept()}
+        
+        Panic -> Die {[playerState = panicState and (health-damage)<=0] receiveBlow()}
+
+        Reloading -> Panic {[playerState = reloadingState] seeOpponent() }
+        
+        Reloading -> Reloading {[playerState = reloadingState] accept() }
+
+        Reloading -> Neutral {[playerState = reloadingState] complete()}
+
+        Die -> Die {[playerState = deadState] accept()}
+     end
+end
+
+class Neutral < State
+    operations
+        accept()
+            begin
+                WriteLine('In state:Neutral operation:accept:');
+            end
+        seeOpponent(defeatable: Boolean)
+            begin
+                if defeatable then
+                    self.player.playerState := self.player.attackState;
+                else
+                    self.player.playerState := self.player.panicState;
+                end;
+            end
+        reload()
+            begin
+              self.player.playerState := self.player.reloadingState;
+            end  
+        
+end
+
+class Reloading < State
+    operations
+        accept()
+            begin
+                WriteLine('In state:Reloading operation:accept:');
+            end
+        complete()
+            begin
+            self.player.playerState := self.player.neutralState;
+            end
+        seeOpponent(defeatable: Boolean)
+            begin
+                self.player.playerState := self.player.panicState;
+            end
+end
+
+
+class Attack < State
+operations
+    accept()
+        begin
+            WriteLine('In state:Attack operation:accept:');
+        end
+    lostOpponent()
+        begin
+            self.player.playerState := self.player.neutralState;
+        end
+
+    receiveBlow(damage: Integer)
+        begin
+            self.player.health := self.player.health - damage;
+            if(self.player.health <= 0) then
+                self.player.playerState := self.player.deadState;
+            end;
+        end
+end
+
+class Panic < State
+operations
+    accept()
+        begin
+            WriteLine('In state:Panic operation:accept:');
+        end
+    lostOpponent()
+        begin
+            self.player.playerState := self.player.neutralState;
+        end
+
+    receiveBlow(damage: Integer)
+        begin
+            self.player.health := self.player.health - damage;
+            if(self.player.health <= 0) then
+                self.player.playerState := self.player.deadState;
+            end;
+        end
+    
+    
+end
+
+class Die < State
+operations
+    accept()
+        begin
+            WriteLine('In state:Die operation:accept:');
+        end
+end
+
+
+    
+
+-- associations
+association playerState between
+    State[1..*]
+    Player[1]
+end
+association has_weapon between
+    Inventory[1]
+    Player[1]
+end
+association game_mode between
+    Level[1]
+    Mode[1..*]
+end
+association has_weapons between
+    Inventory[1]
+    Weapon[0..*]
+end
+association has_players between
+    FPSGame[1]
+    Player[0..*]
+end
+association has_modes between
+    FPSGame[1]
+    Mode[0..*]
+end
+
